@@ -56,6 +56,7 @@ const logKeyActivity = async (keyId, action, req) => {
   }
 };
 
+
 // Admin authentication middleware
 // DEBUGGED Admin authentication middleware
 const authenticateAdmin = (req, res, next) => {
@@ -112,7 +113,7 @@ const authenticateAdmin = (req, res, next) => {
 // Initialize database tables
 const initDatabase = async () => {
   try {
-    await pool.query(`
+    await pool.query(
       CREATE TABLE IF NOT EXISTS keys (
         id SERIAL PRIMARY KEY,
         key_string VARCHAR(255) UNIQUE NOT NULL,
@@ -123,9 +124,9 @@ const initDatabase = async () => {
         expires_at TIMESTAMP,
         status VARCHAR(20) DEFAULT 'active'
       )
-    `);
+    );
     
-    await pool.query(`
+    await pool.query(
       CREATE TABLE IF NOT EXISTS key_activations (
         id SERIAL PRIMARY KEY,
         key_id INTEGER REFERENCES keys(id),
@@ -134,9 +135,9 @@ const initDatabase = async () => {
         ip_address TEXT,
         UNIQUE(key_id, device_id)
       )
-    `);
+    );
     
-    await pool.query(`
+    await pool.query(
       CREATE TABLE IF NOT EXISTS key_logs (
         id SERIAL PRIMARY KEY,
         key_id INTEGER REFERENCES keys(id),
@@ -145,10 +146,58 @@ const initDatabase = async () => {
         user_agent TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
+    );
+    
     console.log('Database tables initialized');
+    
+    // Update existing tables with new columns
+    await updateDatabaseSchema();
+    
   } catch (err) {
     console.error('Database initialization error:', err);
+  }
+};
+
+
+// Add this function after your initDatabase function
+const updateDatabaseSchema = async () => {
+  try {
+    // Check if max_devices column exists
+    const checkResult = await pool.query(
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'keys' AND column_name = 'max_devices'
+    );
+    
+    if (checkResult.rows.length === 0) {
+      console.log('🔄 Adding max_devices column to keys table...');
+      await pool.query(
+        ALTER TABLE keys ADD COLUMN max_devices INTEGER DEFAULT 1
+      );
+      console.log('✅ Added max_devices column successfully');
+    } else {
+      console.log('✅ max_devices column already exists');
+    }
+    
+    // Also check for used_devices column
+    const checkUsedDevices = await pool.query(
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'keys' AND column_name = 'used_devices'
+    );
+    
+    if (checkUsedDevices.rows.length === 0) {
+      console.log('🔄 Adding used_devices column to keys table...');
+      await pool.query(
+        ALTER TABLE keys ADD COLUMN used_devices INTEGER DEFAULT 0
+      );
+      console.log('✅ Added used_devices column successfully');
+    } else {
+      console.log('✅ used_devices column already exists');
+    }
+    
+  } catch (err) {
+    console.error('Database schema update error:', err);
   }
 };
 
