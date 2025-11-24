@@ -1,4 +1,4 @@
-# Team KMZ Vip Gfx
+
 
 # Team KMZ Gfx System - API Documentation
 ## Table of Contents
@@ -17,7 +17,7 @@ The Team KMZ Gfx System is a secure key management API for software licensing an
 
 ### Base URL
 ```
-https://your-domain.com/
+https://kmz-gfx.onrender.com
 ```
 
 ### Response Format
