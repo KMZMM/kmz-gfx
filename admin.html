@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key System Admin</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Key Management System</h1>
+            <button id="logoutBtn">Logout</button>
+        </header>
+
+        <div class="dashboard">
+            <!-- Generate Key Section -->
+            <section class="card">
+                <h2>Generate New Key</h2>
+                <form id="generateKeyForm">
+                    <div class="form-group">
+                        <label>Duration (hours):</label>
+                        <input type="number" id="duration" value="720" min="1" required>
+                    </div>
+                    <button type="submit">Generate Key</button>
+                </form>
+                <div id="keyResult" class="result"></div>
+            </section>
+
+            <!-- Keys List Section -->
+            <section class="card">
+                <h2>Manage Keys</h2>
+                <div class="filters">
+                    <input type="text" id="searchKey" placeholder="Search keys...">
+                    <select id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table id="keysTable">
+                        <thead>
+                            <tr>
+                                <th>Key</th>
+                                <th>Duration</th>
+                                <th>Created</th>
+                                <th>Expires</th>
+                                <th>Status</th>
+                                <th>Used</th>
+                                <th>Device ID</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="keysTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="admin.js"></script>
+</body>
+</html>
