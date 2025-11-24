@@ -308,22 +308,6 @@ app.post('/activateKey', async (req, res) => {
         success: false,
         error: 'Key and device_id are required' });
     }
-
-const isExpired = new Date() > new Date(keyData.expires_at);
-
-if (isExpired) {
-  // Auto-deactivate expired key
-  await pool.query(
-    `UPDATE keys SET status = 'expired' WHERE id = $1`,
-    [keyData.id]
-  );
-  await logKeyActivity(keyData.id, 'activation_expired', req);
-  
-  return res.status(400).json({ 
-    success: false,
-    error: 'Key has expired' 
-  });
-}
     
     // Validate device_id format (basic validation)
     if (device_id.length < 5 || device_id.length > 255) {
@@ -344,6 +328,22 @@ if (isExpired) {
     }
     
     const keyData = keyResult.rows[0];
+
+const isExpired = new Date() > new Date(keyData.expires_at);
+
+if (isExpired) {
+  // Auto-deactivate expired key
+  await pool.query(
+    `UPDATE keys SET status = 'expired' WHERE id = $1`,
+    [keyData.id]
+  );
+  await logKeyActivity(keyData.id, 'activation_expired', req);
+  
+  return res.status(400).json({ 
+    success: false,
+    error: 'Key has expired' 
+  });
+}
     
     // Check if key is active
     if (keyData.status !== 'active') {
