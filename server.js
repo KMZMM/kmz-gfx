@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Security middleware
-app.use(helmet());
+//app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
@@ -125,6 +125,21 @@ app.post('/generateKey', authenticateAdmin, async (req, res) => {
     console.error('Generate key error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Serve admin page
+app.get('/admin', (req, res) => {
+  res.sendFile(__dirname + '/public/admin.html');
+});
+
+// Serve login page  
+app.get('/login', (req, res) => {
+  res.sendFile(__dirname + '/public/login.html');
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'Key System API is running!' });
 });
 
 // Activate key (User endpoint)
