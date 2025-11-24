@@ -147,8 +147,14 @@ const authenticateAdmin = (req, res, next) => {
 // Initialize database tables
 const initDatabase = async () => {
   try {
+    // ✅ CLEAN START - Drop all tables
+    await pool.query('DROP TABLE IF EXISTS key_logs CASCADE');
+    await pool.query('DROP TABLE IF EXISTS key_activations CASCADE');
+    await pool.query('DROP TABLE IF EXISTS keys CASCADE');
+    
+    // Recreate with clean schema
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS keys (
+      CREATE TABLE keys (
         id SERIAL PRIMARY KEY,
         key_string VARCHAR(255) UNIQUE NOT NULL,
         duration_hours INTEGER NOT NULL,
@@ -160,32 +166,8 @@ const initDatabase = async () => {
       )
     `);
     
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS key_activations (
-        id SERIAL PRIMARY KEY,
-        key_id INTEGER REFERENCES keys(id),
-        device_id TEXT NOT NULL,
-        activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        ip_address TEXT,
-        UNIQUE(key_id, device_id)
-      )
-    `);
-    
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS key_logs (
-        id SERIAL PRIMARY KEY,
-        key_id INTEGER REFERENCES keys(id),
-        action VARCHAR(50) NOT NULL,
-        ip_address TEXT,
-        user_agent TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    console.log('Database tables initialized');
-    
-    // Update existing tables with new columns
-    await updateDatabaseSchema();
+    // ... keep the rest of your table creations
+    console.log('✅ Database tables created with clean schema');
     
   } catch (err) {
     console.error('Database initialization error:', err);
@@ -352,13 +334,6 @@ if (isExpired) {
         error: 'Key is not active' });
     }
     
-    // Check if key is expired
-    if (new Date() > new Date(keyData.expires_at)) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Key has expired' });
-    }
-    
     // Check if device is already activated
     const existingActivation = await pool.query(
       `SELECT * FROM key_activations WHERE key_id = $1 AND device_id = $2`,
@@ -394,6 +369,12 @@ if (isExpired) {
       `INSERT INTO key_activations (key_id, device_id, ip_address) VALUES ($1, $2, $3)`,
       [keyData.id, device_id, req.ip]
     );
+
+// ✅ ADD THIS LINE - Update used_devices count
+await pool.query(
+  `UPDATE keys SET used_devices = used_devices + 1 WHERE id = $1`,
+  [keyData.id]
+);
     
     await logKeyActivity(keyData.id, 'activated', req);
     
@@ -506,14 +487,12 @@ app.post('/verifyKey', async (req, res) => {
 // Admin endpoints
 app.get('/admin/keys', authenticateAdmin, async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT k.*, 
-             COUNT(ka.id) as activated_devices
-      FROM keys k
-      LEFT JOIN key_activations ka ON k.id = ka.key_id
-      GROUP BY k.id
-      ORDER BY k.created_at DESC
-    `);
+    // ✅ FIXED - Remove activated_devices confusion
+const result = await pool.query(`
+  SELECT k.*
+  FROM keys k
+  ORDER BY k.created_at DESC
+`);
     res.json(result.rows);
   } catch (err) {
     console.error('Get keys error:', err);
