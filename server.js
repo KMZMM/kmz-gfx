@@ -283,6 +283,22 @@ app.post('/activateKey', async (req, res) => {
         success: false,
         error: 'Key and device_id are required' });
     }
+
+const isExpired = new Date() > new Date(keyData.expires_at);
+
+if (isExpired) {
+  // Auto-deactivate expired key
+  await pool.query(
+    `UPDATE keys SET status = 'expired' WHERE id = $1`,
+    [keyData.id]
+  );
+  await logKeyActivity(keyData.id, 'activation_expired', req);
+  
+  return res.status(400).json({ 
+    success: false,
+    error: 'Key has expired' 
+  });
+}
     
     // Validate device_id format (basic validation)
     if (device_id.length < 5 || device_id.length > 255) {
@@ -385,7 +401,8 @@ app.post('/verifyKey', async (req, res) => {
     if (!key || !device_id) {
       return res.status(400).json({ 
         success: false,
-        error: 'Key and device_id are required' });
+        error: 'Key and device_id are required' 
+      });
     }
     
     const keyResult = await pool.query(`
@@ -396,15 +413,39 @@ app.post('/verifyKey', async (req, res) => {
     `, [key.trim().toUpperCase(), device_id]);
     
     if (keyResult.rows.length === 0) {
-      return res.json({ valid: false, error: 'Key not found' });
+      return res.json({ 
+        valid: false, 
+        error: 'Key not found' 
+      });
     }
     
     const keyData = keyResult.rows[0];
     
+    // Check if key is expired FIRST
+    const isExpired = new Date() > new Date(keyData.expires_at);
+    
+    if (isExpired) {
+      // Auto-deactivate expired key
+      await pool.query(
+        `UPDATE keys SET status = 'expired' WHERE id = $1`,
+        [keyData.id]
+      );
+      await logKeyActivity(keyData.id, 'auto_expired', req);
+      
+      return res.json({
+        valid: false,
+        expires_at: keyData.expires_at,
+        status: 'expired',
+        devices_used: 0,
+        max_devices: keyData.max_devices,
+        message: 'Key has expired'
+      });
+    }
+    
     // Check all validation conditions
     const isValid = keyData.status === 'active' && 
                    keyData.device_activated === true && 
-                   new Date() < new Date(keyData.expires_at);
+                   !isExpired;
     
     if (isValid) {
       await logKeyActivity(keyData.id, 'verified', req);
@@ -431,7 +472,9 @@ app.post('/verifyKey', async (req, res) => {
     console.error('Verify key error:', err);
     res.status(500).json({ 
       success: false,
-      valid: false, error: 'Internal server error' });
+      valid: false, 
+      error: 'Internal server error' 
+    });
   }
 });
 
