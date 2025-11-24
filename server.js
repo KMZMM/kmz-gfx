@@ -57,33 +57,58 @@ const logKeyActivity = async (keyId, action, req) => {
 };
 
 // Admin authentication middleware
+// DEBUGGED Admin authentication middleware
 const authenticateAdmin = (req, res, next) => {
   try {
     const adminSecret = req.headers['admin-secret'] || req.body.admin_secret;
     
-    console.log('Admin auth check - Secret exists:', !!adminSecret);
+    console.log('🔐 Admin auth attempt');
+    console.log('Secret provided:', adminSecret ? 'Yes' : 'No');
+    console.log('Hash exists:', process.env.ADMIN_SECRET_HASH ? 'Yes' : 'No');
     
     if (!adminSecret) {
+      console.log('❌ No admin secret provided');
       return res.status(401).json({ error: 'Admin secret required' });
     }
     
-    // Direct comparison without extensive debugging
-    const isValid = bcrypt.compareSync(adminSecret, process.env.ADMIN_SECRET_HASH);
-    
-    if (isValid) {
-      console.log('Admin auth success');
-      next();
-    } else {
-      console.log('Admin auth failed');
-      res.status(401).json({ error: 'Invalid admin secret' });
+    if (!process.env.ADMIN_SECRET_HASH) {
+      console.error('❌ ADMIN_SECRET_HASH environment variable is not set');
+      return res.status(500).json({ 
+        error: 'Server configuration error' 
+      });
     }
     
+    // Add detailed bcrypt debugging
+    console.log('Hash length:', process.env.ADMIN_SECRET_HASH.length);
+    console.log('Hash prefix:', process.env.ADMIN_SECRET_HASH.substring(0, 10));
+    
+    // Use async bcrypt comparison to avoid blocking
+    bcrypt.compare(adminSecret, process.env.ADMIN_SECRET_HASH, (err, result) => {
+      if (err) {
+        console.error('💥 Bcrypt comparison error:', err);
+        return res.status(500).json({ 
+          error: 'Authentication error',
+          details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+      }
+      
+      if (result) {
+        console.log('✅ Admin authentication successful');
+        next();
+      } else {
+        console.log('❌ Admin authentication failed - Invalid secret');
+        res.status(401).json({ error: 'Invalid admin secret' });
+      }
+    });
+    
   } catch (err) {
-    console.error('Auth error:', err.message);
-    res.status(500).json({ error: 'Authentication failed' });
+    console.error('💥 Auth middleware error:', err);
+    res.status(500).json({ 
+      error: 'Authentication server error',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
-
 // Initialize database tables
 const initDatabase = async () => {
   try {
