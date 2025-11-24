@@ -127,19 +127,25 @@ app.post('/generateKey', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Serve admin page
+// Serve admin page from ROOT folder
 app.get('/admin', (req, res) => {
-  res.sendFile(__dirname + '/public/admin.html');
+  res.sendFile(__dirname + '/admin.html');
 });
 
-// Serve login page  
 app.get('/login', (req, res) => {
-  res.sendFile(__dirname + '/public/login.html');
+  res.sendFile(__dirname + '/login.html');
 });
 
-// Root route
+// Serve CSS file from root
+app.get('/style.css', (req, res) => {
+  res.sendFile(__dirname + '/style.css');
+});
+
 app.get('/', (req, res) => {
-  res.json({ message: 'Key System API is running!' });
+  res.json({ 
+    message: 'Key System API is running!',
+    admin_panel: '/admin'
+  });
 });
 
 // Activate key (User endpoint)
