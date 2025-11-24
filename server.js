@@ -143,8 +143,7 @@ app.get('/style.css', (req, res) => {
 
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Key System API is running!',
-    admin_panel: '/admin'
+    message: 'Team KMZ Gfx System API is running!'
   });
 });
 
