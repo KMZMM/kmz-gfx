@@ -34,6 +34,31 @@ const pool = new Pool({
 });
 
 // Utility functions
+// Add this function to automatically clean up expired keys
+const cleanupExpiredKeys = async () => {
+  try {
+    const result = await pool.query(`
+      UPDATE keys 
+      SET status = 'expired' 
+      WHERE expires_at < CURRENT_TIMESTAMP 
+      AND status = 'active'
+      RETURNING *
+    `);
+    
+    if (result.rows.length > 0) {
+      console.log(`🔄 Auto-expired ${result.rows.length} keys`);
+    }
+  } catch (err) {
+    console.error('Auto-cleanup error:', err);
+  }
+};
+
+// Run cleanup every hour
+setInterval(cleanupExpiredKeys, 60 * 60 * 1000);
+
+// Also run on startup
+cleanupExpiredKeys();
+
 const generateKey = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let key = '';
