@@ -69,12 +69,16 @@ const authenticateAdmin = (req, res, next) => {
     
     if (!adminSecret) {
       console.log('❌ No admin secret provided');
-      return res.status(401).json({ error: 'Admin secret required' });
+      return res.status(401).json({
+        success: false,
+        error: 'Admin secret required'
+      });
     }
     
     if (!process.env.ADMIN_SECRET_HASH) {
       console.error('❌ ADMIN_SECRET_HASH environment variable is not set');
       return res.status(500).json({ 
+        success: false,
         error: 'Server configuration error' 
       });
     }
@@ -88,6 +92,7 @@ const authenticateAdmin = (req, res, next) => {
       if (err) {
         console.error('💥 Bcrypt comparison error:', err);
         return res.status(500).json({ 
+          success: false,
           error: 'Authentication error',
           details: process.env.NODE_ENV === 'development' ? err.message : undefined
         });
@@ -98,13 +103,16 @@ const authenticateAdmin = (req, res, next) => {
         next();
       } else {
         console.log('❌ Admin authentication failed - Invalid secret');
-        res.status(401).json({ error: 'Invalid admin secret' });
+        res.status(401).json({ 
+          success: false,
+          error: 'Invalid admin secret' });
       }
     });
     
   } catch (err) {
     console.error('💥 Auth middleware error:', err);
     res.status(500).json({ 
+      success: false,
       error: 'Authentication server error',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
@@ -231,7 +239,9 @@ app.post('/generateKey', authenticateAdmin, async (req, res) => {
     const { duration_hours = 720, max_devices = 10, status = 'active' } = req.body;
     
     if (!duration_hours || duration_hours <= 0) {
-      return res.status(400).json({ error: 'Valid duration_hours is required' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Valid duration_hours is required' });
     }
     
     const keyString = generateKey();
@@ -253,9 +263,13 @@ app.post('/generateKey', authenticateAdmin, async (req, res) => {
   } catch (err) {
     console.error('Generate key error:', err);
     if (err.code === '23505') { // Unique violation
-      return res.status(409).json({ error: 'Key already exists, please try again' });
+      return res.status(409).json({
+        success: false,
+        error: 'Key already exists, please try again' });
     }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error' });
   }
 });
 
@@ -265,12 +279,16 @@ app.post('/activateKey', async (req, res) => {
     const { key, device_id } = req.body;
     
     if (!key || !device_id) {
-      return res.status(400).json({ error: 'Key and device_id are required' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Key and device_id are required' });
     }
     
     // Validate device_id format (basic validation)
     if (device_id.length < 5 || device_id.length > 255) {
-      return res.status(400).json({ error: 'Invalid device_id format' });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid device_id format' });
     }
     
     const keyResult = await pool.query(
@@ -279,19 +297,25 @@ app.post('/activateKey', async (req, res) => {
     );
     
     if (keyResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Key not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Key not found' });
     }
     
     const keyData = keyResult.rows[0];
     
     // Check if key is active
     if (keyData.status !== 'active') {
-      return res.status(400).json({ error: 'Key is not active' });
+      return res.status(400).json({
+        success: false,
+        error: 'Key is not active' });
     }
     
     // Check if key is expired
     if (new Date() > new Date(keyData.expires_at)) {
-      return res.status(400).json({ error: 'Key has expired' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Key has expired' });
     }
     
     // Check if device is already activated
@@ -319,7 +343,9 @@ app.post('/activateKey', async (req, res) => {
     const currentDevices = parseInt(activationCount.rows[0].count);
     
     if (currentDevices >= keyData.max_devices) {
-      return res.status(400).json({ error: 'Key has reached maximum device limit' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Key has reached maximum device limit' });
     }
     
     // Activate key for this device
@@ -341,9 +367,13 @@ app.post('/activateKey', async (req, res) => {
   } catch (err) {
     console.error('Activate key error:', err);
     if (err.code === '23505') { // Unique constraint violation
-      return res.status(409).json({ error: 'Device already activated with this key' });
+      return res.status(409).json({
+        success: false,
+        error: 'Device already activated with this key' });
     }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error' });
   }
 });
 
@@ -353,7 +383,9 @@ app.post('/verifyKey', async (req, res) => {
     const { key, device_id } = req.body;
     
     if (!key || !device_id) {
-      return res.status(400).json({ error: 'Key and device_id are required' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Key and device_id are required' });
     }
     
     const keyResult = await pool.query(`
@@ -397,7 +429,9 @@ app.post('/verifyKey', async (req, res) => {
     
   } catch (err) {
     console.error('Verify key error:', err);
-    res.status(500).json({ valid: false, error: 'Internal server error' });
+    res.status(500).json({ 
+      success: false,
+      valid: false, error: 'Internal server error' });
   }
 });
 
@@ -415,7 +449,9 @@ app.get('/admin/keys', authenticateAdmin, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Get keys error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error' });
   }
 });
 
@@ -463,7 +499,9 @@ app.put('/admin/keys/:id', authenticateAdmin, async (req, res) => {
     res.json({ success: true, key: result.rows[0] });
   } catch (err) {
     console.error('Update key error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error' });
   }
 });
 
@@ -495,7 +533,9 @@ app.delete('/admin/keys/:id', authenticateAdmin, async (req, res) => {
     }
   } catch (err) {
     console.error('Delete key error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error' });
   }
 });
 
@@ -512,7 +552,9 @@ app.get('/admin/keys/:id/logs', authenticateAdmin, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Get key logs error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error' });
   }
 });
 
@@ -530,7 +572,9 @@ app.post('/admin/cleanup', authenticateAdmin, async (req, res) => {
     });
   } catch (err) {
     console.error('Cleanup error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error' });
   }
 });
 
@@ -554,13 +598,17 @@ app.get('/health', async (req, res) => {
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Endpoint not found' });
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found' });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ 
+    success: false,
+    error: 'Internal server error' });
 });
 
 // Initialize database and start server
