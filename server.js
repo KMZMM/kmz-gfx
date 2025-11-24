@@ -58,17 +58,29 @@ const logKeyActivity = async (keyId, action, req) => {
 
 // Admin authentication middleware
 const authenticateAdmin = (req, res, next) => {
-  const adminSecret = req.headers['admin-secret'] || req.body.admin_secret;
-  
-  if (!adminSecret) {
-    return res.status(401).json({ error: 'Admin secret required' });
-  }
-  
-  // Compare with hashed secret from environment
-  if (bcrypt.compareSync(adminSecret, process.env.ADMIN_SECRET_HASH)) {
-    next();
-  } else {
-    res.status(401).json({ error: 'Invalid admin secret' });
+  try {
+    const adminSecret = req.headers['admin-secret'] || req.body.admin_secret;
+    
+    console.log('Admin auth check - Secret exists:', !!adminSecret);
+    
+    if (!adminSecret) {
+      return res.status(401).json({ error: 'Admin secret required' });
+    }
+    
+    // Direct comparison without extensive debugging
+    const isValid = bcrypt.compareSync(adminSecret, process.env.ADMIN_SECRET_HASH);
+    
+    if (isValid) {
+      console.log('Admin auth success');
+      next();
+    } else {
+      console.log('Admin auth failed');
+      res.status(401).json({ error: 'Invalid admin secret' });
+    }
+    
+  } catch (err) {
+    console.error('Auth error:', err.message);
+    res.status(500).json({ error: 'Authentication failed' });
   }
 };
 
