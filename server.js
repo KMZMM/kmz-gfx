@@ -9,6 +9,16 @@ const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const path = require('path');
+
+// Serve all static files from root folder
+app.use(express.static(path.join(__dirname)));
+
+// Root route → serve login page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
 
 // Security middleware
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -202,6 +212,23 @@ const updateDatabaseSchema = async () => {
 };
 
 // Routes
+
+app.post('/admin/login', async (req, res) => {
+  const adminSecret = req.body?.admin_secret;
+  if (!adminSecret) return res.status(400).json({ success: false, error: 'Admin secret required' });
+
+  try {
+    const match = await bcrypt.compare(adminSecret, process.env.ADMIN_SECRET_HASH);
+    if (match) {
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ success: false, error: 'Invalid admin secret' });
+    }
+  } catch {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 
 app.get('/', (req, res) => {
   res.json({ message: 'Team KMZ Gfx System API is running!', version: '1.0.0' });
