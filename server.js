@@ -61,7 +61,7 @@ const cleanupExpiredKeys = async () => {
 };
 
 // Run cleanup every hour and on startup
-setInterval(cleanupExpiredKeys, 60 * 60 * 1000);
+setInterval(cleanupExpiredKeys, 60 * 1000);
 cleanupExpiredKeys().catch(() => {});
 
 // Key generator
