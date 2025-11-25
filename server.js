@@ -134,10 +134,6 @@ const authenticateAdmin = async (req, res, next) => {
 // Initialize database (create keys, key_activations, key_logs)
 const initDatabase = async () => {
   try {
-    // Clean start (drop if exist)
-    await pool.query('DROP TABLE IF EXISTS key_logs CASCADE');
-    await pool.query('DROP TABLE IF EXISTS key_activations CASCADE');
-    await pool.query('DROP TABLE IF EXISTS keys CASCADE');
 
     // Create keys table
     await pool.query(`
